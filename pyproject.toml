@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]  
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "src"  
+version = "0.1.0"
+description = "A machine learning project to predict vehicle insurance premiums based on various factors."
+authors = [
+    {name = "Asaduzzaman", email = "asaduzzamansheikh777@gmail.com"},
+]
+dynamic = ["dependencies"]  # CRITICAL: Declares that dependencies are not static
+
+[tool.setuptools.packages.find]  # Correct syntax for automatic discovery
+where = ["."]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}  # "file" expects a list

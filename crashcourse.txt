@@ -1,0 +1,803 @@
+1. What is a pyproject.toml file?
+
+TOML (Tom’s Obvious, Minimal Language): It’s a simple configuration file format (like JSON or YAML) but is easier to read and write. 
+TOML is becoming the standard for Python packaging metadata.
+
+2. Why pyproject.toml is important:
+
+> It was introduced with PEP 518 to modernize Python package building. Previously, everything was done using setup.py 
+  but now pyproject.toml allows for more flexibility, better dependency management, and cleaner project configuration.
+> It centralizes metadata about the project: project name, version, dependencies, authors, etc.
+> It supports various build systems (like setuptools, poetry, etc.).
+
+3. Explaining sections of pyproject.toml:
+
+[project]: Defines the basic project information (name, version, description, authors).
+[tool.setuptools]: Specifies that setuptools is being used to build the project.
+[tool.setuptools.dynamic]: Links the external files (like requirements.txt) to dynamically pull dependencies.
+
+4. setup.py with the advent of pyproject.toml: Some tasks previously handled by setup.py (like metadata) are now managed 
+   by pyproject.toml. However, setup.py can still be used, especially if you have complex build steps.
+
+5. How do setup.py, pyproject.toml, and requirements.txt work together?
+
+> pyproject.toml: It’s now the central place for project metadata. Instead of defining your dependencies and project 
+  information in setup.py, you can define them in pyproject.toml.
+  As we did in your project, the line [tool.setuptools.dynamic] dependencies = {file = "requirements.txt"} links your requirements.txt 
+  file to the TOML file, so when the project is built, the dependencies are fetched from requirements.txt.
+
+> setup.py: While it’s still used for custom builds and configurations, most of the basic functionality (like metadata and dependencies) 
+  is being transferred to pyproject.toml. You might still keep a minimal setup.py if you have custom build steps, but for many projects, 
+  it’s not necessary anymore with pyproject.toml.
+
+> requirements.txt: It lists all project dependencies and their versions.
+
+When you run pip install -r requirements.txt, it ensures that all dependencies are installed. The pyproject.toml file can reference 
+it (as we did) so that package dependencies are automatically pulled from there.
+
+
+`pyproject.toml` is the single configuration file that defines your entire Python project—its metadata, dependencies, build instructions, and tool settings—replacing the older fragmented setup files like `setup.py`, `setup.cfg`, `.flake8`, and `mypy.ini`. Written in TOML (Tom's Obvious Minimal Language), it is organized into three main tables: `[build-system]` (how to build the project), `[project]` (what the project is), and `[tool.*]` (how individual tools should behave).
+
+----------------------------------------------------------------------------------------------------------
+
+## 🧱 TOML Syntax Foundations
+
+Before writing `pyproject.toml`, you must understand the TOML constructs it uses.
+
+| Syntax | Meaning | Example |
+|---|---|---|
+| `[section]` | A table (like a dictionary) | `[project]` |
+| `[section.subsection]` | A nested table | `[tool.ruff.lint]` |
+| `[[section]]` | An array of tables (list of dictionaries) | `[[tool.hatch.envs.test.matrix]]` |
+| `key = "value"` | String value | `name = "my-project"` |
+| `key = ["a", "b"]` | Array of strings | `dependencies = ["click"]` |
+| `key = {a = "b"}` | Inline table | `license = {text = "MIT"}` |
+| `key = [{a = "b"}]` | Array of inline tables | `authors = [{name = "You"}]` |
+
+These patterns recur throughout the file; recognizing them makes every section readable.
+
+---
+
+## ⚙️ `[build-system]` Table — How to Build the Project
+
+The `[build-system]` table (standardized by PEP 518) tells pip and other installers **which build backend** to download and use to turn your source code into an installable package (sdist or wheel). It is strongly recommended to always include this table.
+
+### Line-by-Line Example
+
+```toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+```
+
+- `[build-system]` — Opens the table that declares the build toolchain.
+- `requires = ["hatchling"]` — A list of **build-time dependencies** that pip will automatically download and install before building your project. Here it says: “Download `hatchling` to perform the build.” You do not need to pre-install `hatchling` yourself; pip handles it based on this line.
+- `build-backend = "hatchling.build"` — The **Python object (module or callable)** that actually executes the build. `hatchling.build` is the entry point for the Hatchling backend.
+
+### Common Build Backend Configurations
+
+| Backend | `requires` | `build-backend` |
+|---|---|---|
+| Hatchling | `["hatchling >= 1.26"]` | `"hatchling.build"` |
+| setuptools | `["setuptools >= 77.0.3"]` | `"setuptools.build_meta"` |
+| Flit | `["flit_core >= 3.12.0, <5"]` | `"flit_core.buildapi"` |
+| PDM | `["pdm-backend >= 2.4.0"]` | `"pdm.backend"` |
+| uv | `["uv_build >= 0.13.5, <0.14.0"]` | `"uv_build"` |
+
+Choose one backend and copy its recommended snippet; you do not need to memorize all of them.
+
+> **Note:** Some tools (like Poetry before version 2.0) historically used a different metadata format. With Poetry 2.0+, the `[project]` table is supported alongside the legacy `[tool.poetry]` table.
+
+---
+
+## 🏷️ `[project]` Table — What the Project Is
+
+The `[project]` table (standardized by PEP 621) holds the **core metadata** that every PEP 621–compliant tool (pip, Hatch, setuptools, Flit, PDM, Dependabot, etc.) can read. It is the modern, standardized replacement for `setup.py` metadata.
+
+### Required and Optional Keys
+
+- **`name`** is the only key that **must** be statically defined.
+- **`version`** must be present but may be listed as `dynamic` if the backend will supply it later.
+- All other keys are optional.
+
+The full set of allowed keys is: `authors`, `classifiers`, `dependencies`, `description`, `dynamic`, `entry-points`, `gui-scripts`, `keywords`, `license`, `maintainers`, `name`, `optional-dependencies`, `readme`, `requires-python`, `scripts`, `urls`, `version`.
+
+### Line-by-Line Example: Core Metadata
+
+```toml
+[project]
+name = "my-awesome-package"
+version = "0.1.0"
+description = "A short summary of my package"
+readme = "README.md"
+requires-python = ">=3.9"
+```
+
+- `[project]` — Opens the standardized metadata table.
+- `name = "my-awesome-package"` — The distribution name used on PyPI and by `pip install`. Tools normalize this name for consistency.
+- `version = "0.1.0"` — The project version, following PEP 440 rules (e.g., `2024.1.0`, `1.0.0b1`). Prefer already-normalized versions.
+- `description = "A short summary of my package"` — A one-line summary shown in package indexes.
+- `readme = "README.md"` — Points to the full long description. A string path assumes UTF-8 encoding; if the file ends in `.md`, the content type is inferred as Markdown. You can also use a table form: `readme = {file = "README.txt", content-type = "text/markdown"}`.
+- `requires-python = ">=3.9"` — Declares which Python versions your project supports. This also constrains which dependency versions pip will choose.
+
+### Line-by-Line Example: People and Legal
+
+```toml
+authors = [
+    {name = "Jane Doe", email = ""},
+]
+maintainers = [
+    {name = "John Smith", email = ""},
+]
+license = {text = "MIT"}
+```
+
+- `authors = [...]` — An array of inline tables. Each entry has a `name` (required) and optionally an `email`. The exact meaning (“original authors” vs. “current owners”) is open to interpretation; tools pass it through to core metadata.
+- `maintainers = [...]` — Same structure as `authors`, listing the people or organizations responsible for maintenance.
+- `license = {text = "MIT"}` — Declares the license as an inline table. You may alternatively use `license = {file = "LICENSE"}` to point to a license file. The `text` and `file` keys are mutually exclusive; a tool must raise an error if both are present.
+
+### Line-by-Line Example: URLs and Classifiers
+
+```toml
+[project.urls]
+Homepage = ""
+Documentation = ""
+Repository = ""
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+```
+
+- `[project.urls]` — A nested table mapping **labels** to **URLs**. Common labels include `Homepage`, `Documentation`, `Repository`, `Changelog`, and `Bug Tracker`. Tools display these on package pages.
+- `classifiers = [...]` — A list of **Trove classifiers** that categorize your project on PyPI (intended audience, license, Python versions, operating systems, etc.). These are standard strings maintained by PyPI.
+
+### Line-by-Line Example: Runtime and Optional Dependencies
+
+```toml
+dependencies = [
+    "requests >= 2.28",
+    "click",
+]
+
+[project.optional-dependencies]
+dev = ["pytest >= 7.0", "ruff", "mypy"]
+docs = ["sphinx", "sphinx-rtd-theme"]
+```
+
+- `dependencies = [...]` — The **runtime dependencies** required for the package to function. Each entry is a PEP 508 dependency specifier. You can constrain versions (`>= 2.28`) or leave them open (`"click"`). Keep direct dependencies tracked from the start.
+- `[project.optional-dependencies]` — Defines **extras** (feature-specific dependency groups). Each key (e.g., `dev`, `docs`) becomes an installable extra. A user runs `pip install my-package[dev]` to get the development tools. Extras are user-facing features, not automatically installed.
+
+### Line-by-Line Example: Scripts and Entry Points
+
+```toml
+[project.scripts]
+my-cli = "my_package.main:main"
+
+[project.gui-scripts]
+my-gui = "my_package.gui:run"
+
+[project.entry-points."myapp.plugins"]
+plugin-a = "my_plugin_a"
+```
+
+- `[project.scripts]` — Defines **command-line interfaces (CLIs)**. The key (`my-cli`) is the command name installed on the system; the value points to a Python callable in `module:function` form. After installation, running `my-cli` invokes `main()` from `my_package.main`.
+- `[project.gui-scripts]` — Defines **GUI entry points**. On Windows these are wrapped in a GUI executable so they launch without a console window; on other platforms they behave like `scripts`. The value syntax is the same.
+- `[project.entry-points."group"]` — Defines **plugin discovery entry points**. The group name (here `"myapp.plugins"`) is arbitrary but should be namespaced to avoid collisions. Other applications can discover and load your plugin by querying that group via `importlib.metadata`.
+
+### Line-by-Line Example: Dynamic Metadata
+
+```toml
+dynamic = ["version"]
+```
+
+- `dynamic = ["version"]` — Tells tools that the `version` value is **not** in the `pyproject.toml` file and will be supplied by the build backend at build time (for example, read from a `__version__` variable or a Git tag). The `name` key cannot be dynamic; `version` is the only key that is required but may be dynamic. All other keys may be dynamic if the backend supports it.
+
+---
+
+## 🛠️ `[tool.*]` Table — Tool-Specific Configuration
+
+Every tool gets its own namespace under `[tool]`. This table is **not standardized**—each tool defines its own schema. Tools ignore sections they do not own, so `[tool.ruff]`, `[tool.mypy]`, and `[tool.pytest.ini_options]` can coexist peacefully in the same file.
+
+### Line-by-Line Example: Ruff (Linter/Formatter)
+
+```toml
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
+```
+
+- `[tool.ruff]` — Opens Ruff’s top-level configuration.
+- `line-length = 100` — Sets the maximum line length Ruff enforces to 100 characters (Ruff’s default is 88).
+- `target-version = "py312"` — Tells Ruff the minimum Python version your project targets, so it can apply the correct syntax and compatibility rules.
+- `[tool.ruff.lint]` — A nested table for linting rules.
+- `select = ["E", "F", "I", "UP"]` — Enables specific rule categories (pycodestyle errors, Pyflakes, im
+…
+
+I’ve organized your material into a structured, beginner-friendly study note with clear headings, tables, code examples, explanations, and a quick-reference section.
+📄 Download your study note
+
+Download: Python Project Configuration — pyproject.toml Study Note (.txt)
+
+The note also includes a few technical clarifications to make it more accurate and suitable for your Python project development and ML learning.
+pyproject_toml_study_note.txtDocument
+Improve accuracy for technical work
+Upgrade to Plus and use increased reasoning to debug code, work through systems, and solve math or science problems.
+
+
+# Python Project Configuration: `pyproject.toml`
+## A Structured Study Note
+
+---
+
+## 1. What Is `pyproject.toml`?
+
+`pyproject.toml` is the modern, standardized configuration file for Python projects. It can bring several kinds of project configuration together:
+
+- **Project metadata** — name, version, description, authors, license, and supported Python versions.
+- **Dependencies** — packages required at runtime or for optional features.
+- **Build configuration** — the backend and tools used to build distributable packages.
+- **Development-tool settings** — configuration for tools such as Ruff, mypy, and pytest.
+
+It often replaces or consolidates configuration that previously lived in files such as `setup.py`, `setup.cfg`, `.flake8`, and `mypy.ini`.
+
+> **Important:** `pyproject.toml` is a central configuration file, but it does not automatically replace every project file. A project may still need files such as `README.md`, `LICENSE`, lock files, or tool-specific configuration files that are not supported through `pyproject.toml`.
+
+The file uses **TOML** — *Tom's Obvious, Minimal Language* — a human-readable configuration format.
+
+---
+
+## 2. The Three Main Configuration Areas
+
+| Table | Purpose | Think of it as… |
+|---|---|---|
+| `[build-system]` | Declares the build backend and its build-time requirements | How the project is packaged |
+| `[project]` | Defines standardized project metadata and dependencies | What the project is |
+| `[tool.*]` | Stores configuration for individual development tools | How tools should behave |
+
+---
+
+## 3. TOML Syntax Foundations
+
+TOML organizes configuration into tables, key-value pairs, arrays, and inline tables.
+
+| Syntax | Meaning | Example |
+|---|---|---|
+| `[section]` | A table | `[project]` |
+| `[section.subsection]` | A nested table | `[tool.ruff.lint]` |
+| `[[section]]` | An array of tables | `[[project.authors]]` |
+| `key = "value"` | A string value | `name = "my-project"` |
+| `key = 3` | An integer value | `port = 8000` |
+| `key = true` | A Boolean value | `strict = true` |
+| `key = ["a", "b"]` | An array | `dependencies = ["click", "requests"]` |
+| `key = {a = "b"}` | An inline table | `license = {text = "MIT"}` |
+| `key = [{a = "b"}]` | An array containing inline tables | `authors = [{name = "Jane Doe"}]` |
+
+### TOML rules to remember
+
+- Strings are normally written inside double quotes.
+- Tables are introduced using square brackets.
+- Arrays use square brackets and contain comma-separated values.
+- Comments begin with `#`.
+- A key should not be defined more than once in the same table.
+- TOML syntax is strict: values must use the correct data type and structure.
+
+---
+
+## 4. `[build-system]` — How to Build the Project
+
+The `[build-system]` table is standardized by **PEP 518**. It tells build tools which backend to use and which packages must be available to build the project.
+
+### Example
+
+```toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+```
+
+### Line-by-line explanation
+
+- **`[build-system]`** opens the table containing build configuration.
+- **`requires = ["hatchling"]`** declares the build-time dependency. A frontend such as `pip` can install it in an isolated build environment.
+- **`build-backend = "hatchling.build"`** identifies the backend entry point that performs the build.
+
+A build backend can produce distribution formats such as:
+
+- **Source distribution (sdist)** — source files packaged for distribution.
+- **Wheel (`.whl`)** — a built package format that is usually faster and easier to install.
+
+### Common build backends
+
+| Backend | `requires` example | `build-backend` |
+|---|---|---|
+| Hatchling | `["hatchling"]` | `"hatchling.build"` |
+| setuptools | `["setuptools"]` | `"setuptools.build_meta"` |
+| Flit | `["flit_core"]` | `"flit_core.buildapi"` |
+| PDM | `["pdm-backend"]` | `"pdm.backend"` |
+
+Choose one backend appropriate for your project. You generally do not need to configure multiple backends.
+
+---
+
+## 5. `[project]` — What the Project Is
+
+The `[project]` table follows **PEP 621**, which defines standardized Python project metadata.
+
+### Basic example
+
+```toml
+[project]
+name = "my-awesome-package"
+version = "0.1.0"
+description = "A short summary of my package"
+readme = "README.md"
+requires-python = ">=3.9"
+```
+
+### Explanation
+
+| Key | Purpose |
+|---|---|
+| `name` | Distribution/package name |
+| `version` | Project version, following PEP 440 |
+| `description` | Short summary of the project |
+| `readme` | Path to the long project description |
+| `requires-python` | Python versions supported by the project |
+
+**Key rule:** `name` must be provided as static metadata. `version` is required, but it may be supplied dynamically by the build backend.
+
+### Authors and maintainers
+
+```toml
+authors = [
+    {name = "Jane Doe", email = "jane@example.com"},
+]
+
+maintainers = [
+    {name = "John Smith", email = "john@example.com"},
+]
+```
+
+- `authors` identifies the original authors or creators.
+- `maintainers` identifies people responsible for maintaining the project.
+- Each entry is an inline table containing a name and, optionally, an email address.
+
+### License
+
+```toml
+license = "MIT"
+```
+
+For modern PEP 621 metadata, the license can be expressed as a string SPDX license identifier. Some older examples use forms such as `license = {text = "MIT"}`; check the metadata and backend versions used by your project.
+
+### Classifiers
+
+```toml
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+```
+
+Classifiers help package indexes categorize a project by language, operating system, license, intended audience, and other attributes.
+
+### Project URLs
+
+```toml
+[project.urls]
+Homepage = "https://github.com/you/my-package"
+Documentation = "https://my-package.readthedocs.io"
+Repository = "https://github.com/you/my-package.git"
+```
+
+This table maps descriptive labels to project-related URLs.
+
+---
+
+## 6. Dependencies — Required and Optional Packages
+
+### Runtime dependencies
+
+```toml
+[project]
+dependencies = [
+    "requests >= 2.28",
+    "click",
+]
+```
+
+These are packages needed for the project to work at runtime.
+
+Dependency strings follow **PEP 508**. Examples:
+
+```toml
+dependencies = [
+    "requests",
+    "pandas >= 2.0",
+    "scikit-learn >= 1.4, < 2.0",
+]
+```
+
+### Optional dependencies (extras)
+
+```toml
+[project.optional-dependencies]
+dev = ["pytest >= 7.0", "ruff", "mypy"]
+docs = ["sphinx", "sphinx-rtd-theme"]
+```
+
+Optional dependency groups let users install additional packages for specific tasks.
+
+For example:
+
+```bash
+pip install "my-package[dev]"
+```
+
+This installs the package with its `dev` extra.
+
+**Remember:** extras are optional and are not installed automatically unless requested.
+
+---
+
+## 7. Entry Points — Commands and Plugins
+
+Entry points connect installed packages to callable Python functions or plugin-discovery systems.
+
+### Command-line script
+
+```toml
+[project.scripts]
+my-cli = "my_package.main:main"
+```
+
+After installation, the `my-cli` command invokes the `main()` function from `my_package.main`.
+
+The general pattern is:
+
+```text
+command-name = "python_module:function_name"
+```
+
+### GUI script
+
+```toml
+[project.gui-scripts]
+my-gui = "my_package.gui:run"
+```
+
+This declares a GUI-oriented executable entry point. On Windows, it is normally created without opening a console window.
+
+### Plugin entry point
+
+```toml
+[project.entry-points."myapp.plugins"]
+plugin-a = "my_plugin_a"
+```
+
+Applications can discover registered plugins through the entry-point group using Python's `importlib.metadata` facilities.
+
+---
+
+## 8. Dynamic Metadata
+
+Sometimes the build backend obtains metadata from another source, such as a version variable or Git tag.
+
+```toml
+[project]
+name = "my-awesome-package"
+dynamic = ["version"]
+```
+
+This tells metadata consumers that the version is not explicitly written in the `[project]` table and will be provided by the build backend.
+
+Use `dynamic` only when the backend is configured to supply the requested metadata.
+
+---
+
+## 9. `[tool.*]` — Tool-Specific Configuration
+
+The `[tool.*]` namespace is not one universal configuration standard. Each tool defines its own settings.
+
+Different tools can coexist in the same file because each uses its own table.
+
+### Ruff — Linting and formatting
+
+```toml
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
+```
+
+- `line-length` sets the configured maximum line length.
+- `target-version` tells Ruff which Python version to target.
+- `select` enables rule groups:
+  - `E` — pycodestyle errors
+  - `F` — Pyflakes
+  - `I` — import sorting
+  - `UP` — pyupgrade
+- `ignore` disables selected rules.
+
+### mypy — Static type checking
+
+```toml
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+files = ["src/my_package"]
+```
+
+- `python_version` specifies the Python version mypy should check against.
+- `strict = true` enables a collection of stricter type-checking options.
+- `ignore_missing_imports = true` suppresses certain errors for imports without available type information.
+- `files` identifies the files or directories to check.
+
+### pytest — Testing
+
+```toml
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+```
+
+- `testpaths` tells pytest where to search for tests when no explicit path is supplied.
+- `addopts = "-ra"` adds a short summary of test outcomes, including skipped and failed tests.
+
+---
+
+## 10. Complete Example — A Practical Starting Template
+
+This example combines project metadata, dependencies, build configuration, and common development tools.
+
+```toml
+# --------------------------------------------------
+# 1. Build configuration
+# --------------------------------------------------
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+# --------------------------------------------------
+# 2. Project metadata
+# --------------------------------------------------
+[project]
+name = "my-awesome-package"
+version = "0.1.0"
+description = "A short summary of my package"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+
+authors = [
+    {name = "Jane Doe", email = "jane@example.com"},
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "requests >= 2.28",
+    "click",
+]
+
+
+# --------------------------------------------------
+# 3. Optional dependency groups
+# --------------------------------------------------
+[project.optional-dependencies]
+dev = ["pytest >= 7.0", "ruff", "mypy"]
+docs = ["sphinx", "sphinx-rtd-theme"]
+
+
+# --------------------------------------------------
+# 4. Command-line entry point
+# --------------------------------------------------
+[project.scripts]
+my-cli = "my_package.main:main"
+
+
+# --------------------------------------------------
+# 5. Project links
+# --------------------------------------------------
+[project.urls]
+Homepage = "https://github.com/you/my-package"
+Documentation = "https://my-package.readthedocs.io"
+Repository = "https://github.com/you/my-package.git"
+
+
+# --------------------------------------------------
+# 6. Ruff configuration
+# --------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
+
+
+# --------------------------------------------------
+# 7. mypy configuration
+# --------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+files = ["src/my_package"]
+
+
+# --------------------------------------------------
+# 8. pytest configuration
+# --------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+```
+
+---
+
+## 11. Quick Reference
+
+| Concept | Remember |
+|---|---|
+| TOML | Human-readable configuration format |
+| `[build-system]` | Build backend and build-time requirements |
+| `[project]` | Standardized project metadata |
+| `dependencies` | Packages required at runtime |
+| `[project.optional-dependencies]` | Installable extras |
+| `[project.scripts]` | Installed command-line commands |
+| `dynamic` | Metadata supplied by the backend |
+| `[tool.*]` | Tool-specific configuration |
+| PEP 518 | Build-system requirements |
+| PEP 621 | Standard project metadata |
+| PEP 440 | Python package version format |
+| PEP 508 | Dependency specifier format |
+
+---
+
+## 12. Final Rules to Remember
+
+1. **Start simple.** A small project does not need every possible table.
+2. **Use `[build-system]`** to declare how the project is built.
+3. **Use `[project]`** for standardized metadata and runtime dependencies.
+4. **Use extras** for optional development, testing, or documentation packages.
+5. **Use `[tool.*]`** for tool configuration, following each tool's documentation.
+6. **Keep TOML valid.** Tables, keys, strings, arrays, and data types must follow TOML syntax.
+7. **Do not assume every old configuration file disappears.** Some tools or workflows may still require separate files.
+8. **Distinguish package metadata from environment management.** `pyproject.toml` describes and configures the project; it is not automatically a complete lock file or virtual-environment manager.
+
+### One-sentence summary
+
+`pyproject.toml` is the standardized home for Python project metadata and build configuration, with a shared place to organize many development-tool settings.
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------
+
+Cross-Origin Resource Sharing (CORS)
+
+Original: Allow all origins for Cross-Origin Resource Sharing (CORS) Configure middleware to handle CORS, allowing requests 
+from any origin.
+
+Simplified: When you load a web app (e.g., from http://localhost:3000) and it tries to access a server (e.g., http://localhost:8000), 
+CORS controls whether the browser allows this connection. By default, browsers block requests from one 
+"origin" (like a domain or port) to another for security reasons.
+
+In this code, allow_origins=["*"] is set, which means allow all origins (any domain or app can connect). The middleware 
+is added so that your FastAPI app accepts requests from any origin, making it easier for you to access the API from anywhere, 
+such as different frontend apps.
+
+------------------------------------------------------------------------------------------------------------------------------------
+
+**Original:** > async
+
+Simplified: `async` (short for *asynchronous*) allows your code to run tasks without waiting for each to finish one by one. 
+
+For example, imagine you request some data from a user form on a website. While waiting for the data to be sent back, instead 
+of sitting idle, the app can do other tasks (like handling another user's request) in the meantime.
+
+Using `async` helps the app handle multiple requests faster and more efficiently, especially for tasks like reading form data, 
+accessing databases, or making network requests. 
+
+In our code:
+----------------------------------
+async def get_vehicle_data(self):
+    form = await self.request.form()
+    # fetch form data here
+----------------------------------
+
+This means `get_vehicle_data` won’t block the app. The `await` keyword tells Python to pause this function temporarily while it waits 
+for data but allows the app to keep working on other tasks.
+
+In short:
+- **`async`** lets the function run without waiting.
+- **`await`** pauses the function only when necessary, allowing other parts of the app to keep running smoothly.
+
+------------------------------------------------------------------------------------------------------------------------------------
+
+It seems that the self-hosted runner stopped because it's designed to run in the foreground of the terminal when executed with `./run.sh`. This means that if you closed the terminal session or the EC2 instance restarted, the runner would have stopped. To ensure it runs persistently in the background and starts automatically, you should set it up as a service.
+
+Here’s how to do that on your EC2 instance:
+
+### 1. Navigate to the Runner Directory
+
+First, make sure you’re in the `actions-runner` directory on your EC2 instance:
+
+```bash
+cd ~/actions-runner
+```
+
+### 2. Set Up the Runner as a Service
+
+To run the self-hosted GitHub runner as a background service, GitHub provides a built-in script to install it as a service.
+
+Run the following command in the `actions-runner` directory:
+
+```bash
+sudo ./svc.sh install
+```
+
+This command will install the runner as a service, making it easier to start, stop, or restart it.
+
+### 3. Start the Service
+
+After installing the service, start it using the following command:
+
+```bash
+sudo ./svc.sh start
+```
+
+### 4. Check the Status
+
+You can check the status of the runner service to ensure it’s running:
+
+```bash
+sudo ./svc.sh status
+```
+
+### 5. Enable the Service to Start on Boot (Optional)
+
+To ensure that the runner service starts automatically when the EC2 instance reboots, you can use the following command:
+
+```bash
+sudo systemctl enable actions.runner.<your-runner-name>.service
+```
+
+### Additional Notes
+
+- **Replace `<your-runner-name>`**: When checking the status or enabling the service, replace `<your-runner-name>` with the specific name of your runner service. You can find the name of the service by running `systemctl list-units | grep actions.runner`.
+
+- **Re-register the Runner**: If you’re still experiencing issues, there may have been an issue during setup. You might need to re-register the runner. To do this, stop the service, remove the runner, and start the configuration process again with a new registration token from your GitHub repository's settings.
+
+### Example Commands
+
+```bash
+# Stop and remove the service (if needed)
+sudo ./svc.sh stop
+sudo ./svc.sh uninstall
+
+# Re-configure the runner
+./config.sh --url https://github.com/vikashishere/MLOps-Test-Proj --token <NEW_TOKEN>
+
+# Re-install and start the service
+sudo ./svc.sh install
+sudo ./svc.sh start
+```
+
+After following these steps, the runner should be persistently running as a background service on your EC2 instance and ready to accept jobs.

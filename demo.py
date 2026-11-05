@@ -1,5 +1,7 @@
+import sys
 from src.logger import setup_logger
 from src.exceptions import CustomException
+from src.pipeline.training_pipeline import TrainingPipeline
 
 logger = setup_logger(__name__)
 logger.info("Logger initialized for demo.py")
@@ -11,9 +13,16 @@ logger.info("Logger initialized for demo.py")
 # logger.critical("This is a critical message.")
 # logger.info("Logging setup complete. Logs will be written to both console and file.")
 
+# try:
+#     # Simulate some code that raises an exception
+#     1 / 0
+# except Exception as e:
+#     logger.error(f"An error occurred: {e}", exc_info=True)
+#     raise CustomException("Division failed", e) from e
+
 try:
-    # Simulate some code that raises an exception
-    1 / 0
+    training_pipeline = TrainingPipeline()
+    training_pipeline.start_training_pipeline()
 except Exception as e:
-    logger.error(f"An error occurred: {e}", exc_info=True)
-    raise CustomException("Division failed", e) from e
+    logger.error(f"An error occurred in demo.py: {e}", exc_info=True)
+    raise CustomException("An error occurred in demo.py", e) from e

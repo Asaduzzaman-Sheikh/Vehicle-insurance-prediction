@@ -1,0 +1,16 @@
+model_selection:
+  # 1. The algorithm
+  model_name: RandomForestClassifier
+  
+  # 2. The expected score to pass validation
+  expected_score: 0.6
+  
+  # 3. The hyperparameters
+  params:
+    n_estimators: 200
+    min_samples_split: 7
+    min_samples_leaf: 6
+    max_depth: 10
+    criterion: 'entropy'
+    random_state: 101
+    n_jobs: -1

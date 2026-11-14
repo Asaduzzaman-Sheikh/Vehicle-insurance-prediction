@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Vehicle insurance eligibility prediction"
+    />
+    <title>Insurely | Vehicle insurance prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='main.css') }}" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="/" aria-label="Insurely home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path
+                d="M5 11.5 7.2 6h9.6l2.2 5.5M4 11.5h16v6H4zM7 17.5v1.5m10-1.5V19M7.5 14.5h.01M16.5 14.5h.01"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+          <span>insurely<span class="brand-dot">.</span></span>
+        </a>
+        <div class="header-note">
+          <span class="status-dot"></span>
+          <span>Prediction service online</span>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Smart insurance insights</p>
+            <h1>Find out if your vehicle is <em>ready</em> for coverage.</h1>
+            <p class="hero-text">
+              Share a few details about yourself and your vehicle. Our
+              prediction model will estimate your insurance eligibility in
+              seconds.
+            </p>
+            <div class="hero-points">
+              <span><span class="check">✓</span> Fast prediction</span>
+              <span><span class="check">✓</span> Simple and secure</span>
+            </div>
+          </div>
+          <div class="hero-illustration" aria-hidden="true">
+            <div class="sun"></div>
+            <div class="road road-back"></div>
+            <div class="road road-front"></div>
+            <div class="illustration-car">
+              <div class="car-roof"></div>
+              <div class="car-body"></div>
+              <div class="car-window window-left"></div>
+              <div class="car-window window-right"></div>
+              <div class="wheel wheel-left"></div>
+              <div class="wheel wheel-right"></div>
+            </div>
+            <span class="spark spark-one">✦</span>
+            <span class="spark spark-two">✦</span>
+          </div>
+        </section>
+
+        <section class="form-card" aria-labelledby="form-title">
+          <div class="card-heading">
+            <div>
+              <p class="section-kicker">Eligibility check</p>
+              <h2 id="form-title">Tell us about your vehicle</h2>
+            </div>
+            <span class="step-badge">01 <span>/ 01</span></span>
+          </div>
+          <p class="required-note"><span>*</span> All fields are required</p>
+
+          <form method="post" action="/">
+            <div class="form-section">
+              <h3><span class="number">01</span> About you</h3>
+              <div class="field-grid">
+                <label class="field">
+                  <span>Gender</span>
+                  <select name="Gender" required>
+                    <option value="" selected disabled>Select gender</option>
+                    <option value="1">Male</option>
+                    <option value="0">Female</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Age</span>
+                  <div class="input-with-suffix">
+                    <input
+                      type="number"
+                      name="Age"
+                      min="18"
+                      max="100"
+                      placeholder="e.g. 30"
+                      required
+                    /><small>years</small>
+                  </div>
+                </label>
+                <label class="field">
+                  <span>Region code</span>
+                  <input
+                    type="number"
+                    name="Region_Code"
+                    min="0"
+                    step="any"
+                    placeholder="e.g. 28"
+                    required
+                  />
+                </label>
+                <label class="field">
+                  <span>Years with your vehicle</span>
+                  <div class="input-with-suffix">
+                    <input
+                      type="number"
+                      name="Vintage"
+                      min="0"
+                      max="300"
+                      placeholder="e.g. 154"
+                      required
+                    /><small>days</small>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3><span class="number">02</span> Vehicle details</h3>
+              <div class="field-grid">
+                <label class="field">
+                  <span>Annual premium</span>
+                  <div class="input-with-prefix">
+                    <small>$</small
+                    ><input
+                      type="number"
+                      name="Annual_Premium"
+                      min="0"
+                      step="any"
+                      placeholder="e.g. 30,000"
+                      required
+                    />
+                  </div>
+                </label>
+                <label class="field">
+                  <span>Policy sales channel</span>
+                  <input
+                    type="number"
+                    name="Policy_Sales_Channel"
+                    min="0"
+                    step="any"
+                    placeholder="e.g. 26"
+                    required
+                  />
+                </label>
+                <label class="field">
+                  <span>Vehicle age</span>
+                  <select name="Vehicle_Age_lt_1_Year" required>
+                    <option value="" selected disabled>
+                      Select vehicle age
+                    </option>
+                    <option value="1">Less than 1 year</option>
+                    <option value="0">1 year or more</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Older than 2 years</span>
+                  <select name="Vehicle_Age_gt_2_Years" required>
+                    <option value="" selected disabled>Select an option</option>
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3><span class="number">03</span> Insurance history</h3>
+              <div class="field-grid compact-grid">
+                <label class="field">
+                  <span>Driving license</span>
+                  <select name="Driving_License" required>
+                    <option value="" selected disabled>Select an option</option>
+                    <option value="1">Yes, I have a license</option>
+                    <option value="0">No license</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Previously insured</span>
+                  <select name="Previously_Insured" required>
+                    <option value="" selected disabled>Select an option</option>
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Vehicle damage</span>
+                  <select name="Vehicle_Damage_Yes" required>
+                    <option value="" selected disabled>Select an option</option>
+                    <option value="1">Yes, damage reported</option>
+                    <option value="0">No damage</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <p>Your information is used only to generate this prediction.</p>
+              <button type="submit">
+                Check my eligibility <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          </form>
+
+          {% if context %}
+          <div
+            class="result {% if context == 'Eligible for Insurance' %}result-success{% else %}result-warning{% endif %}"
+            role="status"
+          >
+            <span class="result-icon"
+              >{% if context == 'Eligible for Insurance' %}✓{% else %}!{% endif
+              %}</span
+            >
+            <div>
+              <strong>{{ context }}</strong>
+              <span>Based on the information you provided.</span>
+            </div>
+          </div>
+          {% endif %}
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <span>© 2026 Insurely</span>
+        <span>Powered by a machine learning model</span>
+      </footer>
+    </div>
+  </body>
+</html>
